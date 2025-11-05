@@ -29,15 +29,35 @@ const MusicPlayer = () => {
 
   // Canción actual
   const [currentSong, setCurrentSong] = useState({
-    id: 'song-001',
+    id: 38,
     title: "Find Me",
     artist: "XXXTENTACION", 
-    cover: "https://via.placeholder.com/60x60?text=XXXTENTACION"
+    cover: "https://storage.googleapis.com/music-stream-lite-bucket/Cover-XXXTENTACION-Find-me.jpeg",
+    streamUrl: "https://storage.googleapis.com/music-stream-lite-bucket/xxxtentacion-Find-Me.mp3"
   });
 
   // Obtener URL firmada automáticamente
   const { url: streamUrl, loading: urlLoading } = useSongStream(currentSong.id);
   console.log('🎵 MusicPlayer montado, currentSong.id:', currentSong.id, 'streamUrl:', streamUrl, 'loading:', urlLoading);
+  useEffect(() => {
+    // 1. Asegúrate de que tenemos la URL final y que no estamos cargando
+    if (streamUrl && !urlLoading) {
+        // 2. Establecer el nuevo src y cargar la media
+        if (audioRef.current.src !== streamUrl) {
+             audioRef.current.src = streamUrl;
+             audioRef.current.load(); // Intenta forzar la carga de la nueva fuente
+
+             // 3. Opcional: Si el usuario ya había pulsado Play o si quieres inicio automático
+             if (isPlaying) { 
+                 // Necesario debido a las políticas de Autoplay. Puede fallar si no hay interacción previa.
+                 audioRef.current.play().catch(error => {
+                    console.error("🚫 Falló el intento de Autoplay:", error);
+                    // Podrías poner aquí un estado de error o un mensaje al usuario.
+                 });
+             }
+        }
+    }
+}, [streamUrl, urlLoading]);
 
   // Sincronizar volumen con el audio
   useEffect(() => {
@@ -69,23 +89,26 @@ const MusicPlayer = () => {
     }
   };
 
-  // Toggle play/pause
- const togglePlayPause = () => {
-    // No permitir play si la URL no está lista
-    if (!streamUrl || urlLoading) {
-      console.warn('⏳ URL de audio aún no disponible o cargando...');
-      return;
-    }
-
+ // Toggle play/pause
+const togglePlayPause = () => {
+    // Si la URL está cargando, aún así cambiamos el estado para que el useEffect intente el play cuando termine.
     if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-      } else {
-        audioRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
+        if (isPlaying) {
+            audioRef.current.pause();
+        } else {
+            // Si la URL está lista, intentamos tocar inmediatamente.
+            // Si NO está lista, el useEffect lo intentará cuando lo esté.
+            if (streamUrl && !urlLoading) {
+                 audioRef.current.play().catch(error => {
+                     console.error("🚫 Falló al intentar reproducir inmediatamente:", error);
+                 });
+            } else {
+                 console.log('⏳ Intentando reproducir, pero la URL aún no está lista. Esperando el streamUrl...');
+            }
+        }
+        setIsPlaying(!isPlaying);
     }
-  };
+};
 
   // Cambiar volumen
   const handleVolumeChange = (e) => {

@@ -1,14 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import api from '../services/api.js';
 
-/**
- * Hook personalizado para obtener URL firmada de una canción
- * 
- * Uso:
- * const { url, loading, error } = useSongStream(songId);
- * 
- * Automáticamente renota la URL 1 hora antes de expirar
- */
 export const useSongStream = (songId) => {
   const [url, setUrl] = useState(null);
   const [loading, setLoading] = useState(false);

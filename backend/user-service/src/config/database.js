@@ -1,26 +1,49 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import pkg from 'pg';
 const { Pool } = pkg;
 
-// Database connection pool
-export const pool = new Pool({
-  user: process.env.DB_USER || 'admin',
-  host: process.env.DB_HOST || 'localhost',
-  database: process.env.DB_NAME || 'musicstream',
-  password: process.env.DB_PASSWORD || 'password',
-  port: process.env.DB_PORT || 5432,
-  max: 20, // maximum number of clients in the pool
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 20000,
-  connectionTimeout: 20000,
-  allowExitOnIdle: false
-});
+const INSTANCE_CONNECTION_NAME = process.env.INSTANCE_CONNECTION_NAME; // project:region:instance
 
-// Event listeners for the pool
+// Base config (común a ambos entornos)
+const baseConfig = {
+  user: process.env.DB_USER || 'musicstreamdb',
+  database: process.env.DB_NAME || 'musicstream_db',
+  password: process.env.DB_PASSWORD,
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 20000
+};
+
+// Si está en Cloud Run con instancia de Cloud SQL (socket)
+let poolConfig;
+
+if (INSTANCE_CONNECTION_NAME) {
+  console.log('☁️ Using Cloud SQL socket connection...');
+  poolConfig = {
+    ...baseConfig,
+    host: `/cloudsql/${INSTANCE_CONNECTION_NAME}`,
+    ssl: false // Cloud SQL socket no necesita SSL
+  };
+} else {
+  console.log('💻 Using direct IP connection (local)');
+  poolConfig = {
+    ...baseConfig,
+    host: process.env.DB_HOST || '34.44.172.72',
+    port: process.env.DB_PORT || 5432,
+    ssl: { rejectUnauthorized: false } // útil si tu instancia requiere SSL
+  };
+}
+
+export const pool = new Pool(poolConfig);
+
+// Event listeners
 pool.on('connect', () => {
   console.log('🟢 Connected to PostgreSQL database');
 });
 
-pool.on('error', (err, client) => {
+pool.on('error', (err) => {
   console.error('🔴 Database pool error:', err);
 });
 
@@ -28,154 +51,42 @@ pool.on('remove', () => {
   console.log('🔵 Client removed from pool');
 });
 
-// Initialize database tables
+// ===============================
+// Initialize database connection
+// ===============================
 export const initDB = async () => {
   const client = await pool.connect();
   try {
-    console.log('🔄 Initializing user database tables...');
+    console.log('🔄 Verifying database connection...');
+    const result = await client.query('SELECT NOW() as current_time');
+    console.log('✅ Database connected at:', result.rows[0].current_time);
 
-    // Create users table
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        email VARCHAR(255) UNIQUE NOT NULL,
-        password VARCHAR(255) NOT NULL,
-        name VARCHAR(255) NOT NULL,
-        avatar_url VARCHAR(500),
-        preferences JSONB DEFAULT '{}',
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
+    // Verify essential tables exist
+    const tables = await client.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_name IN ('users', 'playlists', 'playlist_songs', 'favorites', 'user_preferences')
+      ORDER BY table_name
     `);
 
-    // Create playlists table
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS playlists (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-        name VARCHAR(255) NOT NULL,
-        description TEXT,
-        cover_url VARCHAR(500),
-        is_public BOOLEAN DEFAULT false,
-        song_count INTEGER DEFAULT 0,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-
-    // Create playlist_songs junction table
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS playlist_songs (
-        id SERIAL PRIMARY KEY,
-        playlist_id INTEGER REFERENCES playlists(id) ON DELETE CASCADE,
-        song_id INTEGER NOT NULL,
-        position INTEGER DEFAULT 0,
-        added_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(playlist_id, song_id)
-      );
-    `);
-
-    // Create user_favorites table
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS user_favorites (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-        song_id INTEGER NOT NULL,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(user_id, song_id)
-      );
-    `);
-
-    // Create user_history table
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS user_history (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-        song_id INTEGER NOT NULL,
-        played_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        play_duration INTEGER DEFAULT 0
-      );
-    `);
-
-    // Create indexes for better performance
-    await client.query(`
-      CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-      CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at);
-      
-      CREATE INDEX IF NOT EXISTS idx_playlists_user_id ON playlists(user_id);
-      CREATE INDEX IF NOT EXISTS idx_playlists_created_at ON playlists(created_at);
-      
-      CREATE INDEX IF NOT EXISTS idx_playlist_songs_playlist_id ON playlist_songs(playlist_id);
-      CREATE INDEX IF NOT EXISTS idx_playlist_songs_song_id ON playlist_songs(song_id);
-      
-      CREATE INDEX IF NOT EXISTS idx_user_favorites_user_id ON user_favorites(user_id);
-      CREATE INDEX IF NOT EXISTS idx_user_favorites_song_id ON user_favorites(song_id);
-      
-      CREATE INDEX IF NOT EXISTS idx_user_history_user_id ON user_history(user_id);
-      CREATE INDEX IF NOT EXISTS idx_user_history_played_at ON user_history(played_at DESC);
-    `);
-
-    // Create updated_at trigger function
-    await client.query(`
-      CREATE OR REPLACE FUNCTION update_updated_at_column()
-      RETURNS TRIGGER AS $$
-      BEGIN
-        NEW.updated_at = CURRENT_TIMESTAMP;
-        RETURN NEW;
-      END;
-      $$ language 'plpgsql';
-    `);
-
-    // Create triggers for updated_at
-    await client.query(`
-      DROP TRIGGER IF EXISTS update_users_updated_at ON users;
-      CREATE TRIGGER update_users_updated_at
-        BEFORE UPDATE ON users
-        FOR EACH ROW
-        EXECUTE FUNCTION update_updated_at_column();
-    `);
-
-    await client.query(`
-      DROP TRIGGER IF EXISTS update_playlists_updated_at ON playlists;
-      CREATE TRIGGER update_playlists_updated_at
-        BEFORE UPDATE ON playlists
-        FOR EACH ROW
-        EXECUTE FUNCTION update_updated_at_column();
-    `);
-
-    console.log('✅ User database tables initialized successfully');
-
-    // Insert sample admin user for testing (optional)
-    try {
-      const bcrypt = await import('bcrypt');
-      const hashedPassword = await bcrypt.hash('admin123', 12);
-      
-      await client.query(`
-        INSERT INTO users (email, password, name, avatar_url) 
-        VALUES ($1, $2, $3, $4)
-        ON CONFLICT (email) DO NOTHING
-      `, ['admin@musicstream.com', hashedPassword, 'Admin User', 'https://via.placeholder.com/150/007AFF/FFFFFF?text=Admin']);
-
-      console.log('👤 Sample admin user created');
-    } catch (error) {
-      console.log('⚠️  Could not create sample user (bcrypt not available in init)');
-    }
-
+    console.log('📋 Tables found:', tables.rows.map(r => r.table_name).join(', ') || 'No tables found');
   } catch (error) {
-    console.error('❌ User database initialization error:', error);
+    console.error('❌ Database initialization error:', error);
     throw error;
   } finally {
     client.release();
   }
 };
 
-// Database health check
+// ===============================
+// Health check
+// ===============================
 export const checkDatabaseHealth = async () => {
   try {
     const client = await pool.connect();
     const result = await client.query('SELECT NOW() as current_time, version() as version');
     client.release();
-    
     return {
       status: 'healthy',
       timestamp: result.rows[0].current_time,
@@ -183,14 +94,13 @@ export const checkDatabaseHealth = async () => {
     };
   } catch (error) {
     console.error('🔴 Database health check failed:', error);
-    return {
-      status: 'unhealthy',
-      error: error.message
-    };
+    return { status: 'unhealthy', error: error.message };
   }
 };
 
+// ===============================
 // Graceful shutdown
+// ===============================
 export const closeDatabase = async () => {
   try {
     await pool.end();
@@ -200,9 +110,10 @@ export const closeDatabase = async () => {
   }
 };
 
-// Utility functions for common operations
+// ===============================
+// Utility helpers
+// ===============================
 export const databaseUtils = {
-  // Execute transaction
   async executeTransaction(callback) {
     const client = await pool.connect();
     try {
@@ -218,7 +129,6 @@ export const databaseUtils = {
     }
   },
 
-  // Pagination helper
   paginate(query, page = 1, limit = 10) {
     const offset = (page - 1) * limit;
     return {
@@ -227,22 +137,21 @@ export const databaseUtils = {
     };
   },
 
-  // Build WHERE clause for dynamic filters
   buildWhereClause(filters) {
     const conditions = [];
     const values = [];
     let paramCount = 0;
 
-    Object.entries(filters).forEach(([key, value]) => {
+    for (const [key, value] of Object.entries(filters)) {
       if (value !== undefined && value !== null && value !== '') {
         paramCount++;
         conditions.push(`${key} = $${paramCount}`);
         values.push(value);
       }
-    });
+    }
 
     return {
-      where: conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '',
+      where: conditions.length ? `WHERE ${conditions.join(' AND ')}` : '',
       values
     };
   }

@@ -18,7 +18,7 @@ const Header = () => {
   const isActive = (path) => location.pathname === path;
 
   const navItems = [
-    { path: '/', label: 'Inicio' },
+    { path: '/home', label: 'Inicio' },
     { path: '/search', label: 'Buscar' },
     { path: '/library', label: 'Tu Biblioteca' }
   ];
@@ -58,15 +58,16 @@ const Header = () => {
     >
       <div className="header-left">
         {/* Logo */}
-        <motion.div 
-          className="logo"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <FaMusic className="logo-icon" size={28} />
-          <span className="logo-text">MusicStream</span>
-        </motion.div>
-
+       <motion.div 
+  className="logo"
+  whileHover={{ scale: 1.05 }}
+  whileTap={{ scale: 0.95 }}
+>
+  <Link to="/home" className="logo-link">
+    <FaMusic className="logo-icon" size={28} />
+    <span className="logo-text">MusicStream</span>
+  </Link>
+</motion.div>
         {/* Navigation */}
         <motion.nav 
           className="nav-links"

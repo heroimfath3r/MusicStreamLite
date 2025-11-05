@@ -1,21 +1,30 @@
+// backend/user-service/src/app.js
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import userRoutes from './routes/users.js';
+import dotenv from 'dotenv';
+import morgan from 'morgan';
+import routes from './routes/index.js';
 import { initDB, checkDatabaseHealth, closeDatabase } from './config/database.js';
+
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3002;
 
 // Middleware
 app.use(helmet());
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:3000', // Puerto donde corre tu React
+  credentials: true
+}));
 app.use(express.json());
+app.use(morgan('dev'));
 
-// Routes
-app.use('/api', userRoutes);
+// ✅ Prefijo general de rutas del servicio
+app.use('/api', routes);
 
-// Health check endpoint
+// ✅ Health check
 app.get('/health', async (req, res) => {
   try {
     const dbHealth = await checkDatabaseHealth();
@@ -26,65 +35,32 @@ app.get('/health', async (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    res.status(500).json({
-      status: 'ERROR',
-      service: 'user-service',
-      error: error.message
-    });
+    res.status(500).json({ status: 'ERROR', error: error.message });
   }
 });
 
-// Database info endpoint (for debugging)
-app.get('/api/database/info', async (req, res) => {
-  try {
-    const dbHealth = await checkDatabaseHealth();
-    res.json(dbHealth);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error('Error:', err);
-  res.status(500).json({ 
-    error: 'Internal server error',
-    message: err.message 
-  });
-});
-
-// 404 handler
+// ✅ Ruta por defecto (404)
 app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-// Graceful shutdown
+// ✅ Cierre controlado
 process.on('SIGINT', async () => {
-  console.log('🛑 Received SIGINT. Shutting down gracefully...');
+  console.log('🛑 Cerrando servidor...');
   await closeDatabase();
   process.exit(0);
 });
 
-process.on('SIGTERM', async () => {
-  console.log('🛑 Received SIGTERM. Shutting down gracefully...');
-  await closeDatabase();
-  process.exit(0);
-});
-
-// Initialize database and start server
+// ✅ Iniciar servidor
 const startServer = async () => {
   try {
-    // Initialize database
     await initDB();
-    
-    // Start server
     app.listen(PORT, () => {
-      console.log(`👤 User Service running on port ${PORT}`);
+      console.log(`🚀 User Service corriendo en http://localhost:${PORT}`);
       console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-      console.log(`🗄️  Database info: http://localhost:${PORT}/api/database/info`);
     });
   } catch (error) {
-    console.error('❌ Failed to start user service:', error);
+    console.error('❌ Error al iniciar el servicio:', error);
     process.exit(1);
   }
 };
