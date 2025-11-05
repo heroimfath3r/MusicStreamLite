@@ -167,4 +167,33 @@ export const playlistsAPI = {
   },
 };
 
+// ============================================
+// SEARCH API
+// ============================================
+export const searchAPI = {
+  // Búsqueda general (todas las entidades)
+  searchAll: async (query) => {
+    const response = await api.get('/search', { params: { q: query } });
+    return response.data;
+  },
+
+  // Buscar solo canciones
+  searchSongs: async (query) => {
+    const response = await api.get('/search/songs', { params: { q: query } });
+    return response.data;
+  },
+
+  // Buscar solo artistas
+  searchArtists: async (query) => {
+    const response = await api.get('/search/artists', { params: { q: query } });
+    return response.data;
+  },
+
+  // Buscar solo álbumes
+  searchAlbums: async (query) => {
+    const response = await api.get('/search/albums', { params: { q: query } });
+    return response.data;
+  },
+};
+
 export default api;
