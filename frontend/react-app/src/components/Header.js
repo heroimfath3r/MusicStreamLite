@@ -1,19 +1,18 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
-  FaMusic, 
-  FaSearch, 
-  FaBell, 
+import {
+  FaMusic,
   FaUser,
-  FaCog
+  FaCog,
+  FaSignOutAlt
 } from 'react-icons/fa';
 import './Header.css';
 
 const Header = () => {
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
   const isActive = (path) => location.pathname === path;
 
@@ -22,6 +21,16 @@ const Header = () => {
     { path: '/search', label: 'Buscar' },
     { path: '/library', label: 'Tu Biblioteca' }
   ];
+
+  const handleLogout = () => {
+    // Limpiar localStorage/sessionStorage
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    sessionStorage.clear();
+
+    // Redirigir a login
+    navigate('/login');
+  };
 
   // Animaciones
   const containerVariants = {
@@ -97,87 +106,62 @@ const Header = () => {
 
       {/* Right side */}
       <div className="header-right">
-        {/* Search */}
-        <motion.div 
-          className={`search-container ${isSearchFocused ? 'focused' : ''}`}
-          whileFocus={{ scale: 1.02 }}
+        {/* User menu */}
+        <motion.div
+          className="user-menu-container"
+          onMouseEnter={() => setIsUserMenuOpen(true)}
+          onMouseLeave={() => setIsUserMenuOpen(false)}
         >
-          <FaSearch className="search-icon" size={14} />
-          <input 
-            type="text" 
-            placeholder="Buscar en MusicStream..."
-            className="search-input"
-            onFocus={() => setIsSearchFocused(true)}
-            onBlur={() => setIsSearchFocused(false)}
-          />
-        </motion.div>
-
-        {/* User actions */}
-        <div className="user-actions">
-          <motion.button 
-            className="notification-btn"
+          <motion.button
+            className="user-avatar"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
-            title="Notificaciones"
+            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
           >
-            <FaBell size={18} />
-            <span className="notification-badge">1</span>
+            <FaUser size={16} />
           </motion.button>
 
-          {/* User menu */}
-          <motion.div 
-            className="user-menu-container"
-            onMouseEnter={() => setIsUserMenuOpen(true)}
-            onMouseLeave={() => setIsUserMenuOpen(false)}
+          {/* Dropdown menu */}
+          <motion.div
+            className="user-dropdown"
+            initial={{ opacity: 0, y: -10 }}
+            animate={isUserMenuOpen ? { opacity: 1, y: 0 } : { opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+            pointerEvents={isUserMenuOpen ? 'auto' : 'none'}
           >
-            <motion.button 
-              className="user-avatar"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-            >
-              <FaUser size={16} />
-            </motion.button>
-
-            {/* Dropdown menu */}
-            <motion.div
-              className="user-dropdown"
-              initial={{ opacity: 0, y: -10 }}
-              animate={isUserMenuOpen ? { opacity: 1, y: 0 } : { opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-              pointerEvents={isUserMenuOpen ? 'auto' : 'none'}
-            >
-              <div className="dropdown-header">
-                <div className="user-info">
-                  <div className="user-avatar-lg">
-                    <FaUser size={20} />
-                  </div>
-                  <div>
-                    <div className="user-name">Juan Pérez</div>
-                    <div className="user-email">juan@example.com</div>
-                  </div>
+            <div className="dropdown-header">
+              <div className="user-info">
+                <div className="user-avatar-lg">
+                  <FaUser size={20} />
+                </div>
+                <div>
+                  <div className="user-name">Juan Pérez</div>
+                  <div className="user-email">juan@example.com</div>
                 </div>
               </div>
+            </div>
 
-              <div className="dropdown-divider"></div>
+            <div className="dropdown-divider"></div>
 
-              <div className="dropdown-menu">
-                <a href="#profile" className="dropdown-item">
-                  <FaUser size={16} />
-                  <span>Mi Perfil</span>
-                </a>
-                <a href="#settings" className="dropdown-item">
-                  <FaCog size={16} />
-                  <span>Configuración</span>
-                </a>
-              </div>
+            <div className="dropdown-menu">
+              <Link to="/profile" className="dropdown-item" onClick={() => setIsUserMenuOpen(false)}>
+                <FaUser size={16} />
+                <span>Mi Perfil</span>
+              </Link>
+              <Link to="/settings" className="dropdown-item" onClick={() => setIsUserMenuOpen(false)}>
+                <FaCog size={16} />
+                <span>Configuración</span>
+              </Link>
+            </div>
 
-              <div className="dropdown-divider"></div>
+            <div className="dropdown-divider"></div>
 
-              <button className="dropdown-logout">Cerrar sesión</button>
-            </motion.div>
+            <button className="dropdown-logout" onClick={handleLogout}>
+              <FaSignOutAlt size={16} />
+              <span>Cerrar sesión</span>
+            </button>
           </motion.div>
-        </div>
+        </motion.div>
       </div>
     </motion.header>
   );

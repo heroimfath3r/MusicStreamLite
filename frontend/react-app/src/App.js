@@ -8,6 +8,8 @@ import Home from './pages/Home.js';
 import Search from './pages/Search.js';
 import Library from './pages/Library.js';
 import Login from './pages/Login.js';
+import Profile from './pages/Profile.js';
+import Settings from './pages/Settings.js';
 
 import PublicLayout from './components/PublicLayout.jsx';
 import PrivateLayout from './components/PrivateLayout.jsx';
@@ -66,6 +68,8 @@ function AnimatedRoutes() {
             <Route path="/home" element={<Home />} />
             <Route path="/search" element={<Search />} />
             <Route path="/library" element={<Library />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/settings" element={<Settings />} />
           </Route>
         </Routes>
       </motion.main>
