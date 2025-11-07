@@ -1,9 +1,8 @@
 // src/routes/albums.js
 import express from 'express';
-const router = express.Router();
+import pool from '../config/database.js'; // Asegúrate de tener este archivo de configuración
 
-// URL base de la API de álbumes desde variables de entorno
-const ALBUMS_API_URL = process.env.ALBUMS_API_URL || 'http://localhost:3001/api/albums';
+const router = express.Router();
 
 /**
  * GET /albums
@@ -11,16 +10,12 @@ const ALBUMS_API_URL = process.env.ALBUMS_API_URL || 'http://localhost:3001/api/
  */
 router.get('/', async (req, res) => {
   try {
-    const response = await fetch(ALBUMS_API_URL);
-
-    if (!response.ok) {
-      throw new Error(`API request failed with status ${response.status}`);
-    }
-
-    const albums = await response.json();
+    const query = 'SELECT * FROM albums ORDER BY release_date DESC';
+    const result = await pool.query(query);
+    
     res.status(200).json({
       success: true,
-      data: albums
+      data: result.rows
     });
   } catch (error) {
     console.error('Error fetching albums:', error.message);
@@ -39,23 +34,19 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const response = await fetch(`${ALBUMS_API_URL}/${id}`);
-
-    if (response.status === 404) {
+    const query = 'SELECT * FROM albums WHERE id = $1';
+    const result = await pool.query(query, [id]);
+    
+    if (result.rows.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'Álbum no encontrado'
       });
     }
-
-    if (!response.ok) {
-      throw new Error(`API request failed with status ${response.status}`);
-    }
-
-    const album = await response.json();
+    
     res.status(200).json({
       success: true,
-      data: album
+      data: result.rows[0]
     });
   } catch (error) {
     console.error('Error fetching album:', error.message);
@@ -70,37 +61,46 @@ router.get('/:id', async (req, res) => {
 /**
  * POST /albums
  * Crea un nuevo álbum
- * Body esperado: { title, artist_id, release_date, cover_url, etc. }
+ * Body esperado: { title, artist_id, release_date, cover_url, genre, duration_ms }
  */
 router.post('/', async (req, res) => {
   try {
-    const albumData = req.body;
-
-    const response = await fetch(ALBUMS_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(albumData)
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      return res.status(response.status).json({
+    const { title, artist_id, release_date, cover_url, genre, duration_ms } = req.body;
+    
+    // Validación básica
+    if (!title || !artist_id) {
+      return res.status(400).json({
         success: false,
-        message: 'Error al crear el álbum',
-        error: errorData.message || 'Error desconocido'
+        message: 'El título y artist_id son requeridos'
       });
     }
-
-    const newAlbum = await response.json();
+    
+    const query = `
+      INSERT INTO albums (title, artist_id, release_date, cover_url, genre, duration_ms) 
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *
+    `;
+    
+    const values = [title, artist_id, release_date, cover_url, genre, duration_ms];
+    const result = await pool.query(query, values);
+    
     res.status(201).json({
       success: true,
       message: 'Álbum creado exitosamente',
-      data: newAlbum
+      data: result.rows[0]
     });
   } catch (error) {
     console.error('Error creating album:', error.message);
+    
+    // Manejo específico para errores de FK (artista no existe)
+    if (error.code === '23503') {
+      return res.status(400).json({
+        success: false,
+        message: 'El artista especificado no existe',
+        error: error.message
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Error al crear el álbum',
@@ -117,40 +117,55 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const albumData = req.body;
-
-    const response = await fetch(`${ALBUMS_API_URL}/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(albumData)
-    });
-
-    if (response.status === 404) {
+    const updates = req.body;
+    
+    // Verificar que haya campos para actualizar
+    const validFields = ['title', 'artist_id', 'release_date', 'cover_url', 'genre', 'duration_ms'];
+    const fieldsToUpdate = Object.keys(updates).filter(key => validFields.includes(key));
+    
+    if (fieldsToUpdate.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No hay campos válidos para actualizar'
+      });
+    }
+    
+    // Construir query dinámicamente
+    const setClause = fieldsToUpdate.map((field, index) => `${field} = $${index + 2}`).join(', ');
+    const values = [id, ...fieldsToUpdate.map(field => updates[field])];
+    
+    const query = `
+      UPDATE albums 
+      SET ${setClause}, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING *
+    `;
+    
+    const result = await pool.query(query, values);
+    
+    if (result.rows.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'Álbum no encontrado'
       });
     }
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      return res.status(response.status).json({
-        success: false,
-        message: 'Error al actualizar el álbum',
-        error: errorData.message || 'Error desconocido'
-      });
-    }
-
-    const updatedAlbum = await response.json();
+    
     res.status(200).json({
       success: true,
       message: 'Álbum actualizado exitosamente',
-      data: updatedAlbum
+      data: result.rows[0]
     });
   } catch (error) {
     console.error('Error updating album:', error.message);
+    
+    if (error.code === '23503') {
+      return res.status(400).json({
+        success: false,
+        message: 'El artista especificado no existe',
+        error: error.message
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Error al actualizar el álbum',
@@ -166,31 +181,60 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-
-    const response = await fetch(`${ALBUMS_API_URL}/${id}`, {
-      method: 'DELETE'
-    });
-
-    if (response.status === 404) {
+    
+    const query = 'DELETE FROM albums WHERE id = $1 RETURNING id';
+    const result = await pool.query(query, [id]);
+    
+    if (result.rows.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'Álbum no encontrado'
       });
     }
-
-    if (!response.ok) {
-      throw new Error(`API request failed with status ${response.status}`);
-    }
-
+    
     res.status(200).json({
       success: true,
       message: 'Álbum eliminado exitosamente'
     });
   } catch (error) {
     console.error('Error deleting album:', error.message);
+    
+    // Manejo específico para errores de integridad referencial
+    if (error.code === '23503') {
+      return res.status(400).json({
+        success: false,
+        message: 'No se puede eliminar el álbum porque tiene canciones asociadas',
+        error: error.message
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Error al eliminar el álbum',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /albums/artist/:artistId
+ * Obtiene todos los álbumes de un artista específico
+ */
+router.get('/artist/:artistId', async (req, res) => {
+  try {
+    const { artistId } = req.params;
+    const query = 'SELECT * FROM albums WHERE artist_id = $1 ORDER BY release_date DESC';
+    const result = await pool.query(query, [artistId]);
+    
+    res.status(200).json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    console.error('Error fetching albums by artist:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener los álbumes del artista',
       error: error.message
     });
   }

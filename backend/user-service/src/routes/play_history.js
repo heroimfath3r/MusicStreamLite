@@ -3,7 +3,7 @@ import express from 'express';
 const router = express.Router();
 
 // URL base de la API de historial de reproducción desde variables de entorno
-const PLAY_HISTORY_API_URL = process.env.PLAY_HISTORY_API_URL || 'http://localhost:3001/api/play-history';
+const PLAY_HISTORY_API_URL = process.env.PLAY_HISTORY_API_URL || 'http://localhost:3002/api/play-history';
 
 /**
  * GET /play-history

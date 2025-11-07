@@ -3,7 +3,7 @@ import express from 'express';
 const router = express.Router();
 
 // URL base de la API de géneros desde variables de entorno
-const GENRES_API_URL = process.env.GENRES_API_URL || 'http://localhost:3001/api/genres';
+const GENRES_API_URL = process.env.GENRES_API_URL || 'http://localhost:3002/api/genres';
 
 /**
  * GET /genres

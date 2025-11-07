@@ -156,3 +156,4 @@ export const databaseUtils = {
     };
   }
 };
+export default pool;

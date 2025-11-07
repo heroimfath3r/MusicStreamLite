@@ -3,7 +3,7 @@ import express from 'express';
 const router = express.Router();
 
 // URL base de la API de favoritos desde variables de entorno
-const FAVORITES_API_URL = process.env.FAVORITES_API_URL || 'http://localhost:3001/api/favorites';
+const FAVORITES_API_URL = process.env.FAVORITES_API_URL || 'http://localhost:3002/api/favorites';
 
 /**
  * GET /favorites
