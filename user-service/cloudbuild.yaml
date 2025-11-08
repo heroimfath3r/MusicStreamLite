@@ -1,87 +1,48 @@
-# backend/user-service/cloudbuild.yaml
-# CI/CD para User Service en Google Cloud
-
 steps:
-  # ============================================================
-  # STEP 1: Build de la imagen Docker
-  # ============================================================
+  # Build de la imagen Docker
   - name: 'gcr.io/cloud-builders/docker'
     id: 'build-image'
     args:
       - 'build'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/user-service:$COMMIT_SHA'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/musicstreamlite/user-service:$SHORT_SHA'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/user-service:latest'
-      - '-f'
-      - 'Dockerfile.prod'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/musicstreamlite/user-service:latest'
       - '.'
-    dir: 'backend/user-service'
 
-  # ============================================================
-  # STEP 2: Push de la imagen a Container Registry
-  # ============================================================
+  # Push de la imagen a Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
     id: 'push-image'
     args:
       - 'push'
-      - 'gcr.io/$PROJECT_ID/user-service:$COMMIT_SHA'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/musicstreamlite/user-service:$SHORT_SHA'
     waitFor: ['build-image']
 
   - name: 'gcr.io/cloud-builders/docker'
     id: 'push-latest'
     args:
       - 'push'
-      - 'gcr.io/$PROJECT_ID/user-service:latest'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/musicstreamlite/user-service:latest'
     waitFor: ['build-image']
 
-  # ============================================================
-  # STEP 3: Escaneo de vulnerabilidades
-  # ============================================================
-  - name: 'gcr.io/cloud-builders/gcloud'
-    id: 'scan-image'
-    args:
-      - 'container'
-      - 'images'
-      - 'scan'
-      - 'gcr.io/$PROJECT_ID/user-service:$COMMIT_SHA'
-    waitFor: ['push-image']
-    allowFailure: true
-
-  # ============================================================
-  # STEP 4: Deploy a Cloud Run
-  # ============================================================
+  # Deploy a Cloud Run
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'deploy-cloud-run'
     args:
       - 'run'
       - 'deploy'
       - 'user-service'
-      - '--image=gcr.io/$PROJECT_ID/user-service:$COMMIT_SHA'
-      - '--region=europe-west1'
+      - '--image=us-central1-docker.pkg.dev/$PROJECT_ID/musicstreamlite/user-service:$SHORT_SHA'
+      - '--region=us-central1'
       - '--platform=managed'
       - '--allow-unauthenticated'
       - '--memory=512Mi'
-      - '--cpu=1'
-      - '--min-instances=0'
-      - '--max-instances=10'
-      - '--port=8080'
       - '--timeout=300'
-      - '--concurrency=80'
-      # Variables de entorno públicas
-      - '--set-env-vars=NODE_ENV=production,PORT=8080,LOG_LEVEL=info,JWT_EXPIRES_IN=24h'
-      # Secrets desde Secret Manager
-      - '--set-secrets=DB_HOST=db-host:latest,DB_PORT=db-port:latest,DB_NAME=db-name:latest,DB_USER=db-user:latest,DB_PASSWORD=db-password:latest,JWT_SECRET=jwt-secret:latest'
-      # VPC para comunicación privada
-      - '--vpc-connector=projects/$PROJECT_ID/locations/europe-west1/connectors/musicstream-connector'
-      - '--vpc-egress=private-ranges-only'
-      # Service Account
-      - '--service-account=user-service@$PROJECT_ID.iam.gserviceaccount.com'
-    waitFor: ['push-image', 'scan-image']
+      - '--add-cloudsql-instances=musicstreamlite:us-central1:musicstreamdb'
+      - '--set-env-vars=DB_USER=musicstreamdb,DB_NAME=musicstream_db,DB_PASSWORD=Aa1005312807$,INSTANCE_CONNECTION_NAME=musicstreamlite:us-central1:musicstreamdb'
+    waitFor: ['push-image']
 
-  # ============================================================
-  # STEP 5: Health Check post-deploy
-  # ============================================================
+  # Health Check
   - name: 'gcr.io/cloud-builders/gcloud'
     id: 'health-check'
     entrypoint: 'bash'
@@ -89,30 +50,19 @@ steps:
       - '-c'
       - |
         SERVICE_URL=$(gcloud run services describe user-service \
-          --region=europe-west1 \
+          --region=us-central1 \
           --format='value(status.url)')
         echo "Service URL: $SERVICE_URL"
         sleep 15
         curl -f "$SERVICE_URL/health" || exit 1
     waitFor: ['deploy-cloud-run']
 
-# ============================================================
-# Configuración de imágenes
-# ============================================================
 images:
-  - 'gcr.io/$PROJECT_ID/user-service:$COMMIT_SHA'
-  - 'gcr.io/$PROJECT_ID/user-service:latest'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/musicstreamlite/user-service:$SHORT_SHA'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/musicstreamlite/user-service:latest'
 
-# ============================================================
-# Opciones adicionales
-# ============================================================
 timeout: 1200s
 
 options:
   machineType: 'N1_HIGHCPU_8'
   logging: CLOUD_LOGGING_ONLY
-  substitutionOption: 'ALLOW_LOOSE'
-
-substitutions:
-  _SERVICE_NAME: 'user-service'
-  _REGION: 'europe-west1'

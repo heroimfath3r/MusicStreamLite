@@ -1,0 +1,55 @@
+name: 🚀 Deploy User Service
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'user-service/**'  # ✅ Sin "backend/"
+
+env:
+  PROJECT_ID: musicstreamlite
+  SERVICE_NAME: user-service
+  REGION: us-central1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: 🔐 Auth to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+      
+      - uses: google-github-actions/setup-gcloud@v2
+      
+      - name: 🔧 Configure Docker
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev
+      
+      - name: 🏗️ Build & Push
+        working-directory: ./user-service  # ✅ Directorio correcto
+        run: |
+          docker build -t us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/musicstreamlite/user-service:${{ github.sha }} .
+          docker push us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/musicstreamlite/user-service:${{ github.sha }}
+      
+      - name: 🚀 Deploy
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image=us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/musicstreamlite/user-service:${{ github.sha }} \
+            --region=${{ env.REGION }} \
+            --platform=managed \
+            --allow-unauthenticated \
+            --memory=512Mi \
+            --timeout=300 \
+            --add-cloudsql-instances=musicstreamlite:us-central1:musicstreamdb \
+            --set-env-vars="DB_USER=musicstreamdb,DB_NAME=musicstream_db,DB_PASSWORD=${{ secrets.DB_PASSWORD }},INSTANCE_CONNECTION_NAME=musicstreamlite:us-central1:musicstreamdb"
+      
+      - name: ✅ Health Check
+        run: |
+          sleep 15
+          curl -f https://user-service-586011919703.us-central1.run.app/health
