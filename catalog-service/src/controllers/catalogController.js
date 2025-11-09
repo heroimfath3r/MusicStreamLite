@@ -1,4 +1,7 @@
+// catalog-service/src/controllers/catalogController.js
 import pool from '../config/database.js';
+import { query } from "../config/database.js";
+
 
 // ============================================
 // SONGS (Ya las tienes)

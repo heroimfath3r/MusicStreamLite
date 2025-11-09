@@ -1,22 +1,28 @@
+// catalog-service/src/config/database.js
 import { Storage } from '@google-cloud/storage';
+import pkg from 'pg';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
 
-// Para obtener __dirname en ES modules
+dotenv.config(); // Para leer variables de entorno desde .env
+
+const { Pool } = pkg;
+
+// -----------------------------------
+// 🔹 CONFIGURACIÓN DE GOOGLE CLOUD STORAGE
+// -----------------------------------
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Configuración de Cloud Storage
 const storage = new Storage({
-  projectId: 'musicstreamlite'
-  // En Cloud Run no necesita keyFilename
-  // Usa automáticamente las credenciales del servicio
+  projectId: 'musicstreamlite',
+  // En Cloud Run no se necesita keyFilename
 });
 
-// Referencia a tu bucket
 const musicBucket = storage.bucket('music-stream-lite-bucket');
 
-// Función para subir archivos
 export const uploadSong = async (fileBuffer, fileName, mimetype) => {
   try {
     const file = musicBucket.file(fileName);
@@ -25,9 +31,7 @@ export const uploadSong = async (fileBuffer, fileName, mimetype) => {
         contentType: mimetype,
       },
     });
-    // Hacer el archivo público para que el frontend pueda acceder
     await file.makePublic();
-    // Obtener URL pública
     const publicUrl = `https://storage.googleapis.com/music-stream-lite-bucket/${fileName}`;
     console.log(`✅ Canción subida: ${fileName}`);
     return publicUrl;
@@ -37,12 +41,10 @@ export const uploadSong = async (fileBuffer, fileName, mimetype) => {
   }
 };
 
-// Función para obtener URL de canción
 export const getSongUrl = (fileName) => {
   return `https://storage.googleapis.com/music-stream-lite-bucket/${fileName}`;
 };
 
-// Función para listar todas las canciones
 export const listSongs = async () => {
   try {
     const [files] = await musicBucket.getFiles();
@@ -61,7 +63,6 @@ export const listSongs = async () => {
   }
 };
 
-// Función para eliminar canción
 export const deleteSong = async (fileName) => {
   try {
     await musicBucket.file(fileName).delete();
@@ -73,4 +74,31 @@ export const deleteSong = async (fileName) => {
   }
 };
 
-export { storage, musicBucket };
+// -----------------------------------
+// 🔹 CONFIGURACIÓN DE POSTGRESQL (CLOUD SQL)
+// -----------------------------------
+
+const pool = new Pool({
+  user: process.env.DB_USER,
+  host: process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port: process.env.DB_PORT || 5432,
+  ssl: {
+    rejectUnauthorized: false,
+  },
+});
+
+export const query = async (text, params) => {
+  try {
+    const result = await pool.query(text, params);
+    return result.rows;
+  } catch (error) {
+    console.error('❌ Error ejecutando query:', error);
+    throw error;
+  }
+};
+
+export { storage, musicBucket, pool };
+
+export default {};

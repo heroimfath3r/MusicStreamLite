@@ -1,53 +1,37 @@
-# backend/catalog-service/Dockerfile
-# backend/catalog-service/Dockerfile.prod
-# Optimizado para Google Cloud Run
+# Dockerfile para el microservicio de catálogo de música
+# ------------------------------
+# Etapa de construcción
+# ------------------------------
 FROM node:18-alpine AS builder
-
 WORKDIR /app
 
-# Copy package files
+# Copiar archivos de dependencias
 COPY package*.json ./
 
-# Install ALL dependencies (including dev) for building
+# Instalar dependencias
 RUN npm ci
 
-# Copy source code
+# Copiar código fuente
 COPY . .
 
-# ============================================================
-# Production stage
-# ============================================================
+# ------------------------------
+# Etapa final (runtime)
+# ------------------------------
 FROM node:18-alpine
-
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copiar desde builder
+COPY --from=builder /app /app
 
-# Install only production dependencies
-RUN npm ci --only=production && \
-    npm cache clean --force
-
-# Copy source code from builder
-COPY --from=builder /app/src ./src
-
-# Create non-root user for security
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001 -G nodejs
-
-# Change ownership
-RUN chown -R nodejs:nodejs /app
-
-# Switch to non-root user
-USER nodejs
-
-# Cloud Run requires port 8080
-EXPOSE 8080
+# Establecer variable de entorno para producción
+ENV NODE_ENV=production
 ENV PORT=8080
 
-# Health check (opcional en Cloud Run pero útil)
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:8080/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+# Instalar dotenv para leer variables
+RUN npm install dotenv
 
-# Start application
+# Exponer el puerto que Cloud Run usa
+EXPOSE 8080
+
+# Comando de inicio
 CMD ["npm", "start"]
