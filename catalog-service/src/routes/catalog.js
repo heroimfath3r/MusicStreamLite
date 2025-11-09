@@ -1,37 +1,39 @@
 import express from 'express';
-import { getSongs, getSongById, uploadSongController } from '../controllers/catalogController.js';
+import { 
+  getSongs, 
+  getSongById, 
+  uploadSongController,
+  getArtists,
+  getArtistById,
+  getAlbums,
+  getAlbumById,
+  searchAll
+} from '../controllers/catalogController.js';
 
 const router = express.Router();
 
-// Rutas que existen en tu controlador
+// ============================================
+// SONGS (Canciones)
+// ============================================
 router.get('/songs', getSongs);
 router.get('/songs/:id', getSongById);
+router.post('/songs', uploadSongController); // Si tienes este endpoint
 
-// Rutas mock para las que no tienes controlador
-router.get('/artists', (req, res) => {
-  res.json({ 
-    success: true, 
-    data: [
-      { id: 1, name: 'XXXTENTACION', genre: 'Hip Hop' },
-      { id: 2, name: 'The Weeknd', genre: 'R&B' }
-    ]
-  });
-});
+// ============================================
+// ARTISTS (Artistas)
+// ============================================
+router.get('/artists', getArtists);
+router.get('/artists/:id', getArtistById);
 
-router.get('/artists/:id', (req, res) => {
-  res.json({ 
-    success: true, 
-    data: { id: req.params.id, name: 'Artista', genre: 'Género' }
-  });
-});
+// ============================================
+// ALBUMS (Álbumes)
+// ============================================
+router.get('/albums', getAlbums);
+router.get('/albums/:id', getAlbumById);
 
-router.get('/search', (req, res) => {
-  const { q } = req.query;
-  res.json({ 
-    success: true, 
-    query: q,
-    data: []
-  });
-});
+// ============================================
+// SEARCH (Búsqueda)
+// ============================================
+router.get('/search', searchAll);
 
 export default router;

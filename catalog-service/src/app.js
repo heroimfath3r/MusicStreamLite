@@ -1,3 +1,4 @@
+// catalog-service/src/app.js
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -22,6 +23,6 @@ app.get('/health', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🎵 Catalog Service running on port ${PORT}`);
 });

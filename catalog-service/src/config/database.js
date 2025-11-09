@@ -8,8 +8,9 @@ const __dirname = path.dirname(__filename);
 
 // Configuración de Cloud Storage
 const storage = new Storage({
-  projectId: 'musicstreamlite',
-  keyFilename: path.join(__dirname, '../../service-account-key.json')
+  projectId: 'musicstreamlite'
+  // En Cloud Run no necesita keyFilename
+  // Usa automáticamente las credenciales del servicio
 });
 
 // Referencia a tu bucket
