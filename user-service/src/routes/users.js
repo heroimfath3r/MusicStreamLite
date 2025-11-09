@@ -1,10 +1,11 @@
 // backend/user-service/src/routes/users.js
 import express from 'express';
-import { 
-  register, 
-  login, 
+import {
+  register,
+  login,
   getProfile,
   updateProfile,
+  getAllUsers, // 🆕 nuevo endpoint
   addFavorite,
   removeFavorite,
   getFavorites,
@@ -16,30 +17,49 @@ import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// ==========================================
-// RUTAS PÚBLICAS
-// ==========================================
-router.post('/register', register);
-router.post('/login', login);
+// ====================================================
+// USERS (registro, login, perfil, administración)
+// ====================================================
 
-// ==========================================
-// RUTAS PROTEGIDAS - PERFIL
-// ==========================================
-router.get('/profile', authenticateToken, getProfile);
-router.put('/profile', authenticateToken, updateProfile);
+// 👉 Registrar nuevo usuario
+router.post('/users/register', register);
 
-// ==========================================
-// RUTAS PROTEGIDAS - FAVORITOS
-// ==========================================
+// 👉 Login de usuario
+router.post('/users/login', login);
+
+// 👉 Obtener todos los usuarios (solo para pruebas/admin)
+router.get('/users', getAllUsers);
+
+// 👉 Perfil del usuario autenticado
+router.get('/users/profile', authenticateToken, getProfile);
+
+// 👉 Actualizar perfil del usuario autenticado
+router.put('/users/profile', authenticateToken, updateProfile);
+
+// ====================================================
+// FAVORITES (manejo de canciones favoritas)
+// ====================================================
+
+// 👉 Agregar canción a favoritos
 router.post('/favorites', authenticateToken, addFavorite);
+
+// 👉 Obtener canciones favoritas del usuario
 router.get('/favorites', authenticateToken, getFavorites);
+
+// 👉 Eliminar canción de favoritos
 router.delete('/favorites/:song_id', authenticateToken, removeFavorite);
 
-// ==========================================
-// RUTAS PROTEGIDAS - HISTORIAL Y STATS
-// ==========================================
+// ====================================================
+// HISTORIAL / ESTADÍSTICAS
+// ====================================================
+
+// 👉 Registrar reproducción
 router.post('/play', authenticateToken, recordPlay);
+
+// 👉 Obtener historial de reproducciones
 router.get('/history', authenticateToken, getPlayHistory);
+
+// 👉 Obtener estadísticas del usuario
 router.get('/stats', authenticateToken, getUserStats);
 
 export default router;

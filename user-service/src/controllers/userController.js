@@ -206,6 +206,35 @@ export const updateProfile = async (req, res) => {
 };
 
 // ============================================
+// 👥 HU3: VER USUARIOS REGISTRADOS
+// ============================================
+export const getAllUsers = async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT user_id, email, name, country, created_at, last_login
+       FROM users
+       ORDER BY created_at DESC`
+    );
+
+    res.json({
+      success: true,
+      count: result.rows.length,
+      users: result.rows.map(u => ({
+        id: u.user_id,
+        email: u.email,
+        name: u.name,
+        country: u.country,
+        createdAt: u.created_at,
+        lastLogin: u.last_login
+      }))
+    });
+  } catch (error) {
+    console.error('❌ Get all users error:', error);
+    sendError(res, 500, 'Internal server error while fetching users');
+  }
+};
+
+// ============================================
 // 🎵 HU6: CREAR PLAYLIST
 // ============================================
 export const createPlaylist = async (req, res) => {
