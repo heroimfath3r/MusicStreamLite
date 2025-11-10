@@ -1,5 +1,6 @@
 // analytics-service/src/controllers/analyticsController.js
 import { analyticsDB, firestore } from '../config/database.js';
+import { runHealthCheck } from '../config/healthCheck.js';
 
 // Track song play
 export const trackPlay = async (req, res) => {
@@ -533,31 +534,23 @@ async function updateEngagementAnalytics(type, targetId, userId) {
 }
 
 // Health check for analytics service
+import { runHealthCheck } from '../config/healthCheck.js';
 export const getAnalyticsHealth = async (req, res) => {
-  try {
-    // Test Firestore connection
-    const testRef = firestore.collection('health_checks').doc('test');
-    await testRef.set({
-      timestamp: new Date(),
-      service: 'analytics'
-    });
+  const result = await runHealthCheck();
 
-    const doc = await testRef.get();
-    
-    res.json({
-      status: 'healthy',
+  if (result.ok) {
+    res.status(200).json({
+      status: 'ok',
       service: 'analytics-service',
-      database: 'connected',
+      firestore: 'connected',
       timestamp: new Date().toISOString(),
-      testData: doc.exists ? 'OK' : 'ERROR'
     });
-
-  } catch (error) {
-    console.error('Analytics health check failed:', error);
+  } else {
     res.status(500).json({
-      status: 'unhealthy',
+      status: 'error',
       service: 'analytics-service',
-      error: error.message
+      firestore: 'unreachable',
+      message: result.message,
     });
   }
 };
