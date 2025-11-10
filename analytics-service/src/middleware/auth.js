@@ -9,6 +9,7 @@ export const authenticateFirebaseToken = async (req, res, next) => {
       return res.status(401).json({ error: 'Authorization token required' });
     }
 
+    
     const token = authHeader.split('Bearer ')[1];
     
     const decodedToken = await admin.auth().verifyIdToken(token);
