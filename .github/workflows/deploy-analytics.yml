@@ -2,54 +2,99 @@ name: 🚀 Deploy Analytics Service
 
 on:
   push:
-    branches: [main]
+    branches: 
+      - main
     paths:
-      - 'analytics-service/**'  # ✅ Sin "backend/"
+      - 'analytics-service/**'
+      - '.github/workflows/deploy-analytics.yml'
 
 env:
   PROJECT_ID: musicstreamlite
   SERVICE_NAME: analytics-service
   REGION: us-central1
+  REGISTRY: us-central1-docker.pkg.dev
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    
     permissions:
       contents: 'read'
       id-token: 'write'
 
     steps:
-      - uses: actions/checkout@v4
+      # 1. Checkout code
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
       
-      - name: 🔐 Auth to GCP
+      # 2. Auth to GCP with Service Account Key
+      - name: 🔐 Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
-          
       
-      - uses: google-github-actions/setup-gcloud@v2
+      # 3. Setup gcloud CLI
+      - name: 🔧 Setup Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          install_components: 'gke-gcloud-auth-plugin'
       
-      - name: 🔧 Configure Docker
-        run: gcloud auth configure-docker us-central1-docker.pkg.dev
-      
-      - name: 🏗️ Build & Push
-        working-directory: ./analytics-service  # ✅ Directorio correcto
+      # 4. Configure Docker for Google Artifact Registry
+      - name: 🐳 Configure Docker for GAR
         run: |
-          docker build -t us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/musicstreamlite/analytics-service:${{ github.sha }} .
-          docker push us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/musicstreamlite/analytics-service:${{ github.sha }}
+          gcloud auth configure-docker ${{ env.REGISTRY }}
       
-      - name: 🚀 Deploy
+      # 5. Build Docker image
+      - name: 🏗️ Build Docker image
+        working-directory: ./analytics-service
+        run: |
+          docker build \
+            -t ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/musicstreamlite/${{ env.SERVICE_NAME }}:${{ github.sha }} \
+            -t ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/musicstreamlite/${{ env.SERVICE_NAME }}:latest \
+            .
+      
+      # 6. Push to Google Artifact Registry
+      - name: 📤 Push to Google Artifact Registry
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/musicstreamlite/${{ env.SERVICE_NAME }}:${{ github.sha }}
+          docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/musicstreamlite/${{ env.SERVICE_NAME }}:latest
+      
+      # 7. Deploy to Cloud Run
+      - name: 🚀 Deploy to Google Cloud Run
         run: |
           gcloud run deploy ${{ env.SERVICE_NAME }} \
-            --image=us-central1-docker.pkg.dev/${{ env.PROJECT_ID }}/musicstreamlite/analytics-service:${{ github.sha }} \
+            --image=${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/musicstreamlite/${{ env.SERVICE_NAME }}:${{ github.sha }} \
             --region=${{ env.REGION }} \
             --platform=managed \
             --allow-unauthenticated \
             --memory=512Mi \
-            --timeout=300 \
-            --set-env-vars="FIRESTORE_PROJECT_ID=${{ env.PROJECT_ID }},NODE_ENV=production"
+            --timeout=300s \
+            --set-env-vars="FIRESTORE_PROJECT_ID=${{ env.PROJECT_ID }},NODE_ENV=production" \
+            --project=${{ env.PROJECT_ID }}
       
-      - name: ✅ Health Check
+      # 8. Get service URL
+      - name: 📍 Get service URL
+        id: service-url
         run: |
-          sleep 15
-          curl -f https://analytics-service-586011919703.us-central1.run.app/health
+          URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} \
+            --region=${{ env.REGION }} \
+            --format='value(status.url)' \
+            --project=${{ env.PROJECT_ID }})
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "🔗 Service URL: $URL"
+      
+      # 9. Health check
+      - name: ✅ Health check
+        run: |
+          sleep 10
+          SERVICE_URL="${{ steps.service-url.outputs.url }}"
+          echo "Checking health at: $SERVICE_URL/api/analytics/health"
+          curl -f "$SERVICE_URL/api/analytics/health" || exit 1
+      
+      # 10. Success notification
+      - name: 🎉 Deployment successful
+        run: |
+          echo "✅ Analytics Service deployed successfully"
+          echo "📍 Region: ${{ env.REGION }}"
+          echo "🔗 URL: ${{ steps.service-url.outputs.url }}"
+          echo "📦 Image: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/musicstreamlite/${{ env.SERVICE_NAME }}:${{ github.sha }}"
