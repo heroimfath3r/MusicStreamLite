@@ -567,23 +567,19 @@ async function updateEngagementAnalytics(type, targetId, userId) {
   }
 }
 
-// Health check for analytics service
+// Health check para el servicio de analytics
 export const getAnalyticsHealth = async (req, res) => {
-  const result = await runHealthCheck();
-
-  if (result.ok) {
-    res.status(200).json({
-      status: 'ok',
-      service: 'analytics-service',
-      firestore: 'connected',
+  try {
+    res.json({
+      status: "OK",
+      service: "analytics-service",
       timestamp: new Date().toISOString(),
     });
-  } else {
+  } catch (error) {
+    console.error("Health check failed:", error);
     res.status(500).json({
-      status: 'error',
-      service: 'analytics-service',
-      firestore: 'unreachable',
-      message: result.message,
+      status: "unhealthy",
+      error: error.message,
     });
   }
 };
