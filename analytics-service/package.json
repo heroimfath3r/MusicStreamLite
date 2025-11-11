@@ -10,7 +10,7 @@
     "test": "jest",
     "docker:build": "docker build -t analytics-service .",
     "docker:run": "docker run -p 8080:8080 analytics-service",
-    "healthcheck": "node src/healthCheck.js"
+    "healthcheck": "node src/config/healthCheck.js"
   },
   "dependencies": {
     "@google-cloud/firestore": "^8.0.0",
