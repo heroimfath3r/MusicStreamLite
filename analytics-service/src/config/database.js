@@ -18,9 +18,12 @@ export const initFirestore = () => {
     };
 
     // 🔑 Local o Service Account
-    if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-      config.keyFilename = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-    }
+    // Solo usar keyFilename si existe Y si estamos en local
+if (process.env.GOOGLE_APPLICATION_CREDENTIALS && process.env.NODE_ENV !== 'production') {
+  config.keyFilename = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+} else {
+  console.log('🔐 Usando credenciales predeterminadas del entorno (Cloud Run / ADC)');
+}
 
     // 🧪 Emulador
     if (process.env.FIRESTORE_EMULATOR_HOST) {
