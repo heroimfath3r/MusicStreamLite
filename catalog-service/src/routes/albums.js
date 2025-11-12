@@ -1,4 +1,4 @@
-// src/routes/albums.js
+// backend/user-service/src/routes/albums.js
 import express from 'express';
 import pool from '../config/database.js';
 

@@ -1,4 +1,4 @@
-// backend/user-service/src/app.js
+// C:\Proyectos\MusicStreamLite\MusicStreamLite-backend\user-service\src\app.js
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';

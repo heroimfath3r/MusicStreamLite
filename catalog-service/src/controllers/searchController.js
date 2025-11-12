@@ -1,4 +1,4 @@
-// backend/user-service/src/controllers/searchController.js
+// backend/catalog-service/src/controllers/searchController.js
 import { pool } from '../config/database.js';
 
 /**
