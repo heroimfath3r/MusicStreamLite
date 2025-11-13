@@ -85,7 +85,7 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - PORT=3001
       - LOG_LEVEL=info
-      - CORS_ORIGIN=${CORS_ORIGIN:-https://musicstream.example.com}
+      - CORS_ORIGIN=${CORS_ORIGIN:-https://musicstream-frontend-586011919703.us-central1.run.app}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.catalog.rule=Host(`api.musicstream.example.com`) && PathPrefix(`/api/catalog`)"
@@ -134,7 +134,7 @@ services:
       - JWT_EXPIRES_IN=24h
       - PORT=3002
       - LOG_LEVEL=info
-      - CORS_ORIGIN=${CORS_ORIGIN:-https://musicstream.example.com}
+      - CORS_ORIGIN=${CORS_ORIGIN:-https://musicstream-frontend-586011919703.us-central1.run.app}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.user.rule=Host(`api.musicstream.example.com`) && PathPrefix(`/api/users`, `/api/auth`)"
@@ -174,7 +174,7 @@ services:
       - LOG_LEVEL=info
       - GOOGLE_APPLICATION_CREDENTIALS=/app/service-account.json
       - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
-      - CORS_ORIGIN=${CORS_ORIGIN:-https://musicstream.example.com}
+      - CORS_ORIGIN=${CORS_ORIGIN:-https://musicstream-frontend-586011919703.us-central1.run.app}
     volumes:
       - ./secrets/service-account.json:/app/service-account.json:ro
     labels:
