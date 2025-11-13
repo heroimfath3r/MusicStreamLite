@@ -15,7 +15,8 @@ const PORT = process.env.PORT || 8080
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: 'http://localhost:3000', // Puerto donde corre tu React
+  origin: ['http://localhost:3000', 
+  'https://musicstream-frontend-586011919703.us-central1.run.app'], // Puertos donde corre tu React
   credentials: true
 }));
 app.use(express.json());
