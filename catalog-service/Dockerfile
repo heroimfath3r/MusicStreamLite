@@ -1,4 +1,3 @@
-# Dockerfile para el microservicio de catálogo de música
 # ------------------------------
 # Etapa de construcción
 # ------------------------------
@@ -20,17 +19,15 @@ COPY . .
 FROM node:18-alpine
 WORKDIR /app
 
-# Copiar desde builder
+# Copiar todo desde el builder (incluye node_modules correctos)
 COPY --from=builder /app /app
 
-# Establecer variable de entorno para producción
+# Establecer variable de entorno
 ENV NODE_ENV=production
 
-# Instalar dotenv para leer variables
-RUN npm install dotenv
-
-# Exponer el puerto que Cloud Run usa
+# Exponer puerto para Cloud Run
 EXPOSE 5234
 
 # Comando de inicio
 CMD ["npm", "start"]
+

@@ -62,7 +62,7 @@ steps:
       - '--region=europe-west1'
       - '--platform=managed'
       - '--allow-unauthenticated'
-      - '--memory=512Mi'
+      - '--memory=1Gi'
       - '--cpu=1'
       - '--min-instances=0'
       - '--max-instances=10'
@@ -110,7 +110,7 @@ images:
 timeout: 1200s  # 20 minutos máximo
 
 options:
-  machineType: 'N1_HIGHCPU_8'
+  machineType: 'N1_HIGHCPU_4'
   logging: CLOUD_LOGGING_ONLY
   substitutionOption: 'ALLOW_LOOSE'
 
@@ -119,4 +119,4 @@ options:
 # ============================================================
 substitutions:
   _SERVICE_NAME: 'catalog-service'
-  _REGION: 'europe-west1'
+  _REGION: 'us-central1'
