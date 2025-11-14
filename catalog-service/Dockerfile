@@ -30,7 +30,7 @@ ENV NODE_ENV=production
 RUN npm install dotenv
 
 # Exponer el puerto que Cloud Run usa
-EXPOSE 8080
+EXPOSE 5234
 
 # Comando de inicio
 CMD ["npm", "start"]
