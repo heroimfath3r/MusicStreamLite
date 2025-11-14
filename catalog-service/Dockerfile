@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Instalar dependencias (incluye dotenv porque está en package.json)
-RUN npm ci --omit=dev
+RUN npm ci
 
 # Copiar código fuente
 COPY . .
