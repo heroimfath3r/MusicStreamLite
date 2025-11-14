@@ -1,5 +1,5 @@
 // analytics-service/src/controllers/analyticsController.js
-import { analyticsDB, firestore } from '../config/database.js';
+import { firestore } from '../config/database.js';
 
 
 // Track song play
@@ -409,7 +409,7 @@ export async function getSongAnalyticsData(songId, period) {
     playsSnapshot.forEach(doc => {
       const play = doc.data();
       plays.push(play);
-      totalDuration += play.duration || 0;
+      totalDuration += play.duration_played || 0;
       if (play.userId && play.userId !== 'anonymous') {
         uniqueUsers.add(play.userId);
       }
@@ -480,7 +480,7 @@ export async function getTrendingSongsData(limit, period) {
       } 
       
       songPlays[songId].playCount++;
-      songPlays[songId].totalDuration += play.duration || 0;
+      songPlays[songId].totalDuration += play.duration_played || 0;
       
       if (play.timestamp > songPlays[songId].lastPlayed) {
         songPlays[songId].lastPlayed = play.timestamp;
@@ -547,7 +547,7 @@ async function generateRecommendations(userId, limit) {
 }
 
 // Get platform-wide analytics
- export async function getPlatformAnalyticsData(period) {
+export async function getPlatformAnalyticsData(period) {
   const now = new Date();
   let startDate = new Date();
 
@@ -586,7 +586,7 @@ async function generateRecommendations(userId, limit) {
       if (play.userId && play.userId !== 'anonymous') {
         uniqueUsers.add(play.userId);
       }
-      totalDuration += play.duration || 0;
+      totalDuration += play.duration_played || 0;
     });
 
     // Popular songs (top 5)
