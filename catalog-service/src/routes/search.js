@@ -1,4 +1,7 @@
-// backend/user-service/src/routes/search.js
+// catalog-service/src/routes/search.js
+// ✅ RUTAS PARA BÚSQUEDA
+// Importa de searchController que SÍ existe
+
 import express from 'express';
 import {
   searchAll,
@@ -9,10 +12,18 @@ import {
 
 const router = express.Router();
 
-// Búsqueda general (todas las entidades)
+// ============================================================
+// BÚSQUEDA GENERAL (todas las entidades)
+// ============================================================
 router.get('/', searchAll);
 
-// Búsquedas específicas por tipo
+// ============================================================
+// BÚSQUEDAS ESPECÍFICAS POR TIPO
+// ============================================================
+// GET /search/songs?q=query     → Buscar solo canciones
+// GET /search/artists?q=query   → Buscar solo artistas
+// GET /search/albums?q=query    → Buscar solo álbumes
+
 router.get('/songs', searchSongs);
 router.get('/artists', searchArtists);
 router.get('/albums', searchAlbums);

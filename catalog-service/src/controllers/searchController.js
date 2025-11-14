@@ -1,10 +1,13 @@
-// backend/catalog-service/src/controllers/searchController.js
-import { pool } from '../config/database.js';
+// catalog-service/src/controllers/searchController.js
+// ✅ CONTROLADOR PARA BÚSQUEDAS
+// Usa query() de database.js para todas las operaciones
+
+import { query } from '../config/database.js';
 
 /**
  * Buscar en todas las entidades (canciones, artistas, álbumes)
  */
-export const searchAll = async (req, res) => {
+export const searchAll = async (req, res, next) => {
   try {
     const { q } = req.query;
 
@@ -64,40 +67,36 @@ export const searchAll = async (req, res) => {
 
     // Ejecutar todas las búsquedas en paralelo
     const [songsResult, artistsResult, albumsResult] = await Promise.all([
-      pool.query(songsQuery, [searchTerm]),
-      pool.query(artistsQuery, [searchTerm]),
-      pool.query(albumsQuery, [searchTerm])
+      query(songsQuery, [searchTerm]),
+      query(artistsQuery, [searchTerm]),
+      query(albumsQuery, [searchTerm])
     ]);
 
     res.status(200).json({
       success: true,
       query: q,
       results: {
-        songs: songsResult.rows,
-        artists: artistsResult.rows,
-        albums: albumsResult.rows
+        songs: songsResult,
+        artists: artistsResult,
+        albums: albumsResult
       },
       count: {
-        songs: songsResult.rows.length,
-        artists: artistsResult.rows.length,
-        albums: albumsResult.rows.length,
-        total: songsResult.rows.length + artistsResult.rows.length + albumsResult.rows.length
+        songs: songsResult.length,
+        artists: artistsResult.length,
+        albums: albumsResult.length,
+        total: songsResult.length + artistsResult.length + albumsResult.length
       }
     });
   } catch (error) {
     console.error('Error en búsqueda:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al realizar la búsqueda',
-      error: error.message
-    });
+    next(error);
   }
 };
 
 /**
  * Buscar solo canciones
  */
-export const searchSongs = async (req, res) => {
+export const searchSongs = async (req, res, next) => {
   try {
     const { q } = req.query;
 
@@ -110,7 +109,7 @@ export const searchSongs = async (req, res) => {
 
     const searchTerm = `%${q.trim()}%`;
 
-    const query = `
+    const searchQuery = `
       SELECT
         s.song_id as id,
         s.title,
@@ -127,28 +126,24 @@ export const searchSongs = async (req, res) => {
       LIMIT 50
     `;
 
-    const result = await pool.query(query, [searchTerm]);
+    const result = await query(searchQuery, [searchTerm]);
 
     res.status(200).json({
       success: true,
       query: q,
-      data: result.rows,
-      count: result.rows.length
+      data: result,
+      count: result.length
     });
   } catch (error) {
     console.error('Error buscando canciones:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al buscar canciones',
-      error: error.message
-    });
+    next(error);
   }
 };
 
 /**
  * Buscar solo artistas
  */
-export const searchArtists = async (req, res) => {
+export const searchArtists = async (req, res, next) => {
   try {
     const { q } = req.query;
 
@@ -161,7 +156,7 @@ export const searchArtists = async (req, res) => {
 
     const searchTerm = `%${q.trim()}%`;
 
-    const query = `
+    const searchQuery = `
       SELECT
         artist_id as id,
         name,
@@ -173,28 +168,24 @@ export const searchArtists = async (req, res) => {
       LIMIT 50
     `;
 
-    const result = await pool.query(query, [searchTerm]);
+    const result = await query(searchQuery, [searchTerm]);
 
     res.status(200).json({
       success: true,
       query: q,
-      data: result.rows,
-      count: result.rows.length
+      data: result,
+      count: result.length
     });
   } catch (error) {
     console.error('Error buscando artistas:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al buscar artistas',
-      error: error.message
-    });
+    next(error);
   }
 };
 
 /**
  * Buscar solo álbumes
  */
-export const searchAlbums = async (req, res) => {
+export const searchAlbums = async (req, res, next) => {
   try {
     const { q } = req.query;
 
@@ -207,7 +198,7 @@ export const searchAlbums = async (req, res) => {
 
     const searchTerm = `%${q.trim()}%`;
 
-    const query = `
+    const searchQuery = `
       SELECT
         al.album_id as id,
         al.title,
@@ -221,20 +212,16 @@ export const searchAlbums = async (req, res) => {
       LIMIT 50
     `;
 
-    const result = await pool.query(query, [searchTerm]);
+    const result = await query(searchQuery, [searchTerm]);
 
     res.status(200).json({
       success: true,
       query: q,
-      data: result.rows,
-      count: result.rows.length
+      data: result,
+      count: result.length
     });
   } catch (error) {
     console.error('Error buscando álbumes:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al buscar álbumes',
-      error: error.message
-    });
+    next(error);
   }
 };

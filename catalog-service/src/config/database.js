@@ -1,28 +1,32 @@
+
 // catalog-service/src/config/database.js
+// 🔑 ESTE ES EL ÚNICO ARCHIVO QUE GESTIONA LA DB
+// Todos los demás archivos importan de aquí
+
 import { Storage } from '@google-cloud/storage';
 import pkg from 'pg';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 
-dotenv.config(); // Para leer variables de entorno desde .env
+dotenv.config();
 
 const { Pool } = pkg;
 
-// -----------------------------------
-// 🔹 CONFIGURACIÓN DE GOOGLE CLOUD STORAGE
-// -----------------------------------
+// ============================================================
+// 📁 CONFIGURACIÓN DE GOOGLE CLOUD STORAGE
+// ============================================================
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const storage = new Storage({
   projectId: 'musicstreamlite',
-  // En Cloud Run no se necesita keyFilename
 });
 
 const musicBucket = storage.bucket('music-stream-lite-bucket');
 
+// Funciones para Google Cloud Storage
 export const uploadSong = async (fileBuffer, fileName, mimetype) => {
   try {
     const file = musicBucket.file(fileName);
@@ -74,9 +78,9 @@ export const deleteSong = async (fileName) => {
   }
 };
 
-// -----------------------------------
-// 🔹 CONFIGURACIÓN DE POSTGRESQL (CLOUD SQL)
-// -----------------------------------
+// ============================================================
+// 🗄️ CONFIGURACIÓN DE POSTGRESQL (CLOUD SQL)
+// ============================================================
 
 const pool = new Pool({
   user: process.env.DB_USER,
@@ -87,7 +91,9 @@ const pool = new Pool({
   ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : false,
 });
 
-export const query = async (text, params) => {
+// ⭐ FUNCIÓN CENTRALIZADA PARA TODAS LAS QUERIES
+// Esta es la que todos los controladores y rutas deben usar
+export const query = async (text, params = []) => {
   try {
     const result = await pool.query(text, params);
     return result.rows;
@@ -97,6 +103,7 @@ export const query = async (text, params) => {
   }
 };
 
-export { storage, musicBucket, pool };
+// Exporta el pool si alguien lo necesita directamente (aunque es mejor usar query())
+export { pool, storage, musicBucket };
 
 export default {};

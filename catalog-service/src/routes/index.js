@@ -1,24 +1,31 @@
-//C:\Proyectos\MusicStreamLite\MusicStreamLite-backend\catalog-service\src\routes\index.js
+// catalog-service/src/routes/index.js
+// 🎯 ESTE ARCHIVO ORGANIZA TODAS LAS RUTAS
+// Es el único punto de entrada para todas las subrutas
+
 import { Router } from 'express';
-// Importa las nuevas rutas que moviste
 import albumsRouter from './albums.js'; 
 import artistsRouter from './artists.js'; 
-import searchRouter from './search.js'; // La nueva ruta de búsqueda
-import songsRouter from './songs.js'; // La nueva ruta de canciones
-import catalogRouter from './catalog.js';
+import searchRouter from './search.js';
+import songsRouter from './songs.js';
 import genresRouter from './genres.js';
-import streamRoute from './stream.js';
-
+import streamRouter from './stream.js';
 
 const router = Router();
 
-router.use('/albums', albumsRouter);
-router.use('/artists', artistsRouter);
-router.use('/songs', songsRouter); 
-router.use('/search', searchRouter);
-router.use('/catalog', catalogRouter); // Nueva ruta de catálogo
-router.use('/genres', genresRouter); // Nueva ruta de géneros
-router.use('/stream', streamRoute); // Nueva ruta de streaming
-// Añade aquí todas las demás rutas de catálogo
+// ============================================================
+// MONTA CADA SUBRUTAS CON SU PREFIJO CORRESPONDIENTE
+// ============================================================
+
+router.use('/songs', songsRouter);       // /api/songs/*
+router.use('/artists', artistsRouter);   // /api/artists/*
+router.use('/albums', albumsRouter);     // /api/albums/*
+router.use('/search', searchRouter);     // /api/search/*
+router.use('/genres', genresRouter);     // /api/genres/*
+router.use('/stream', streamRouter);     // /api/stream/*
+
+// ============================================================
+// NOTA: catalogRouter se elimina porque es redundante
+// Todas las rutas ya están cubiertas por los archivos anteriores
+// ============================================================
 
 export default router;
