@@ -2,23 +2,10 @@
 // ✅ CONTROLADOR PARA STREAMING
 // Genera URLs firmadas de Google Cloud Storage para reproducir canciones
 
-import { Storage } from '@google-cloud/storage';
 import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { query } from '../config/database.js';
+import { query, musicBucket } from '../config/database.js';
 
 dotenv.config();
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Inicializar Storage de Google Cloud
-const storage = new Storage({
-  projectId: process.env.GCP_PROJECT_ID || 'musicstreamlite',
-});
-
-const bucket = storage.bucket(process.env.GCS_BUCKET || 'music-stream-lite-bucket');
 
 // ============================================================
 // GET /stream/songs/:songId/stream-url
@@ -71,7 +58,7 @@ export const getStreamUrl = async (req, res, next) => {
     // El nombre será: song.mp3
     const fileName = audioFileUrl.split('/').pop();
 
-    const file = bucket.file(fileName);
+    const file = musicBucket.file(fileName);
 
     // Verificar que el archivo existe en GCS
     const [exists] = await file.exists();
