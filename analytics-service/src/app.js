@@ -1,4 +1,5 @@
-import express from 'express';
+
+// analytics-service/src/app.js
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
