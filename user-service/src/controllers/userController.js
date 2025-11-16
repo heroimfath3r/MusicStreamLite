@@ -318,6 +318,16 @@ export const addFavorite = async (req, res) => {
 
     if (!song_id) return sendError(res, 400, 'Song ID is required');
 
+    // ✅ AGREGAR ESTO: Verificar que la canción existe
+    const songCheck = await pool.query(
+      'SELECT song_id FROM songs WHERE song_id = $1',
+      [song_id]
+    );
+
+    if (songCheck.rows.length === 0) {
+      return sendError(res, 400, 'Song not found');
+    }
+
     // Verificar si ya existe en favoritos
     const existing = await pool.query(
       'SELECT favorite_id FROM favorites WHERE user_id = $1 AND song_id = $2',
@@ -354,7 +364,6 @@ export const addFavorite = async (req, res) => {
     sendError(res, 500, 'Internal server error');
   }
 };
-
 // ============================================
 // ❌ HU5: ELIMINAR CANCIÓN DE FAVORITOS
 // ============================================
