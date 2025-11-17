@@ -53,10 +53,26 @@ export const getStreamUrl = async (req, res, next) => {
       });
     }
 
-    // 2. 📁 Extraer el nombre del archivo de la URL
-    // Si la URL es: https://storage.googleapis.com/music-stream-lite-bucket/song.mp3
-    // El nombre será: song.mp3
-    const fileName = audioFileUrl.split('/').pop();
+    // 2. 📁 EXTRAER EL PATH COMPLETO INCLUYENDO CARPETA
+    // Si la URL es: https://storage.googleapis.com/music-stream-lite-bucket/Lil%20Uzi%20Vert/Lil%20Uzi%20Vert%20-%20Aye.mp3
+    // Extraer: Lil%20Uzi%20Vert/Lil%20Uzi%20Vert%20-%20Aye.mp3
+    // ✅ NUEVO:
+    const bucketName = 'music-stream-lite-bucket';
+    const bucketIndex = audioFileUrl.indexOf(bucketName);
+    
+    if (bucketIndex === -1) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid audio file URL format',
+        songId
+      });
+    }
+
+    // Obtener el path relativo (después de "bucket-name/")
+    const pathStartIndex = bucketIndex + bucketName.length + 1;
+    const fileName = audioFileUrl.substring(pathStartIndex);
+
+    console.log(`🎵 [streamController] Obteniendo archivo: ${fileName}`);
 
     const file = musicBucket.file(fileName);
 
@@ -70,6 +86,8 @@ export const getStreamUrl = async (req, res, next) => {
       });
     }
 
+    console.log(`✅ [streamController] Archivo encontrado: ${fileName}`);
+
     // 3. 🔑 Generar URL firmada con 24 horas de expiración
     const oneDay = 24 * 60 * 60 * 1000; // 24 horas en milisegundos
     const [signedUrl] = await file.getSignedUrl({
@@ -77,6 +95,8 @@ export const getStreamUrl = async (req, res, next) => {
       action: 'read',
       expires: Date.now() + oneDay,
     });
+
+    console.log(`🔗 [streamController] URL firmada generada para: ${fileName}`);
 
     // Responder con la URL
     res.status(200).json({
