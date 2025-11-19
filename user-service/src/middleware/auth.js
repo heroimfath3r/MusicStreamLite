@@ -1,4 +1,4 @@
-// middleware/auth.js
+//C:\Proyectos\MusicStreamLite\MusicStreamLite-backend\user-service\src\middleware\auth.js
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-in-production';
