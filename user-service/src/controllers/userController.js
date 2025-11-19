@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import { pool } from '../config/database.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-in-production';
-const JWT_EXPIRES_IN = '24h';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h'; // Leer desde env
 const SALT_ROUNDS = 12;
 const JWT_ISSUER = process.env.JWT_ISSUER || null;
 const JWT_AUDIENCE = process.env.JWT_AUDIENCE || null;
