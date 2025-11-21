@@ -220,4 +220,4 @@ export const deleteArtist = async (req, res, next) => {
     next(error);
   }
 };
-// ============================================================
+// prueba
